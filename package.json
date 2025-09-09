@@ -1,0 +1,38 @@
+{
+  "name": "playwright-ai-integration",
+  "version": "1.0.0",
+  "description": "AI-powered Playwright test generation with MCP server integration",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "mcp-server": "node src/mcp-server.js",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test-integration": "node scripts/test-integration.js",
+    "install-browsers": "playwright install"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@playwright/test": "^1.45.0",
+    "express": "^4.18.2",
+    "ws": "^8.14.2",
+    "openai": "^4.52.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.5.0"
+  },
+  "keywords": [
+    "playwright",
+    "ai",
+    "testing",
+    "automation",
+    "mcp",
+    "model-context-protocol"
+  ]
+}

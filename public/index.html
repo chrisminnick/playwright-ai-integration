@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Playwright AI Integration</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(90deg, #2196f3, #21cbf3);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .main-content {
+        padding: 40px;
+      }
+
+      .session-control {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+        border: 2px solid #e9ecef;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+
+      .input-group input:focus {
+        outline: none;
+        border-color: #2196f3;
+      }
+
+      .button {
+        background: linear-gradient(45deg, #2196f3, #21cbf3);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-right: 10px;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(33, 150, 243, 0.3);
+      }
+
+      .button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .button.danger {
+        background: linear-gradient(45deg, #f44336, #ff6b6b);
+      }
+
+      .button.danger:hover {
+        box-shadow: 0 8px 25px rgba(244, 67, 54, 0.3);
+      }
+
+      .status {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 600;
+        margin-left: 15px;
+      }
+
+      .status.active {
+        background: #d4edda;
+        color: #155724;
+      }
+
+      .status.inactive {
+        background: #f8d7da;
+        color: #721c24;
+      }
+
+      .prompt-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+      }
+
+      .prompt-input {
+        width: 100%;
+        min-height: 120px;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+        font-family: inherit;
+        resize: vertical;
+        transition: border-color 0.3s;
+      }
+
+      .prompt-input:focus {
+        outline: none;
+        border-color: #2196f3;
+      }
+
+      .prompt-examples {
+        margin-top: 15px;
+        padding: 15px;
+        background: #e3f2fd;
+        border-radius: 8px;
+      }
+
+      .prompt-examples h4 {
+        margin-bottom: 10px;
+        color: #1976d2;
+      }
+
+      .example {
+        background: white;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        border-left: 4px solid #2196f3;
+      }
+
+      .example:hover {
+        background: #f5f5f5;
+      }
+
+      .results-section {
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+      }
+
+      .results-section h3 {
+        margin-bottom: 20px;
+        color: #333;
+      }
+
+      .action-log {
+        background: #1e1e1e;
+        color: #f8f8f2;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        max-height: 400px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        margin-bottom: 20px;
+      }
+
+      .generated-test {
+        background: #1e1e1e;
+        color: #f8f8f2;
+        padding: 20px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        white-space: pre-wrap;
+        position: relative;
+      }
+
+      .copy-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #444;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .copy-button:hover {
+        background: #555;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #2196f3;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .alert {
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 8px;
+        font-weight: 600;
+      }
+
+      .alert.error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+      }
+
+      .alert.success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🎭 Playwright AI Integration</h1>
+        <p>Generate automated tests using natural language prompts</p>
+      </div>
+
+      <div class="main-content">
+        <!-- Session Control -->
+        <div class="session-control">
+          <h3>Session Control</h3>
+          <div class="input-group">
+            <label for="apiKey"
+              >OpenAI API Key (optional if set in environment):</label
+            >
+            <input type="password" id="apiKey" placeholder="sk-..." />
+          </div>
+          <button class="button" id="startSession">Start Session</button>
+          <button class="button danger" id="stopSession" disabled>
+            Stop Session
+          </button>
+          <span class="status inactive" id="sessionStatus">Inactive</span>
+          <div id="loadingIndicator" class="loading hidden"></div>
+        </div>
+
+        <!-- Prompt Section -->
+        <div class="prompt-section">
+          <h3>AI Prompt</h3>
+          <textarea
+            class="prompt-input"
+            id="promptInput"
+            placeholder="Describe what you want to test. For example: 'Go to google.com and search for playwright testing'"
+          >
+          </textarea>
+
+          <div class="prompt-examples">
+            <h4>Example Prompts:</h4>
+            <div
+              class="example"
+              onclick="setPrompt('Go to google.com and search for playwright testing')"
+            >
+              Go to google.com and search for playwright testing
+            </div>
+            <div
+              class="example"
+              onclick="setPrompt('Navigate to github.com, click on the search box, and search for microsoft/playwright')"
+            >
+              Navigate to github.com, click on the search box, and search for
+              microsoft/playwright
+            </div>
+            <div
+              class="example"
+              onclick="setPrompt('Open example.com and take a screenshot of the page')"
+            >
+              Open example.com and take a screenshot of the page
+            </div>
+            <div
+              class="example"
+              onclick="setPrompt('Go to httpbin.org/forms/post, fill in the customer name field with John Doe, and submit the form')"
+            >
+              Go to httpbin.org/forms/post, fill in the customer name field with
+              "John Doe", and submit the form
+            </div>
+          </div>
+
+          <br /><br />
+          <button class="button" id="processPrompt" disabled>
+            Process Prompt
+          </button>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section">
+          <h3>Results</h3>
+          <div id="alertContainer"></div>
+
+          <div id="actionLog" class="action-log hidden">
+            <strong>Action Log:</strong><br />
+            <span id="actionLogContent"></span>
+          </div>
+
+          <div id="generatedTestContainer" class="hidden">
+            <h4>Generated Playwright Test:</h4>
+            <div class="generated-test">
+              <button class="copy-button" onclick="copyTest()">Copy</button>
+              <code id="generatedTest"></code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let ws = null;
+      let isProcessing = false;
+
+      // DOM elements
+      const startSessionBtn = document.getElementById('startSession');
+      const stopSessionBtn = document.getElementById('stopSession');
+      const sessionStatus = document.getElementById('sessionStatus');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const apiKeyInput = document.getElementById('apiKey');
+      const promptInput = document.getElementById('promptInput');
+      const processPromptBtn = document.getElementById('processPrompt');
+      const alertContainer = document.getElementById('alertContainer');
+      const actionLog = document.getElementById('actionLog');
+      const actionLogContent = document.getElementById('actionLogContent');
+      const generatedTestContainer = document.getElementById(
+        'generatedTestContainer'
+      );
+      const generatedTest = document.getElementById('generatedTest');
+
+      // Event listeners
+      startSessionBtn.addEventListener('click', startSession);
+      stopSessionBtn.addEventListener('click', stopSession);
+      processPromptBtn.addEventListener('click', processPrompt);
+
+      // Initialize WebSocket connection
+      function initWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          handleWebSocketMessage(data);
+        };
+
+        ws.onerror = (error) => {
+          showAlert('WebSocket connection error', 'error');
+        };
+      }
+
+      function handleWebSocketMessage(data) {
+        switch (data.type) {
+          case 'action-executed':
+            appendToActionLog(
+              `✓ ${data.data.action.name}: ${JSON.stringify(
+                data.data.action.arguments
+              )}`
+            );
+            break;
+          case 'result':
+            handlePromptResult(data.data);
+            break;
+          case 'error':
+            showAlert(data.message, 'error');
+            isProcessing = false;
+            updateUI();
+            break;
+        }
+      }
+
+      async function startSession() {
+        try {
+          showLoading(true);
+          const response = await fetch('/api/start-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              apiKey: apiKeyInput.value,
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showAlert('Session started successfully!', 'success');
+            updateSessionStatus(true);
+            initWebSocket();
+          } else {
+            showAlert(result.error, 'error');
+          }
+        } catch (error) {
+          showAlert(`Error starting session: ${error.message}`, 'error');
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      async function stopSession() {
+        try {
+          showLoading(true);
+          const response = await fetch('/api/stop-session', {
+            method: 'POST',
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            showAlert('Session stopped successfully!', 'success');
+            updateSessionStatus(false);
+            if (ws) {
+              ws.close();
+              ws = null;
+            }
+          } else {
+            showAlert(result.error, 'error');
+          }
+        } catch (error) {
+          showAlert(`Error stopping session: ${error.message}`, 'error');
+        } finally {
+          showLoading(false);
+        }
+      }
+
+      async function processPrompt() {
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+          showAlert('Please enter a prompt', 'error');
+          return;
+        }
+
+        try {
+          isProcessing = true;
+          updateUI();
+          clearResults();
+          appendToActionLog('Processing prompt...');
+
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(
+              JSON.stringify({
+                type: 'process-prompt',
+                prompt: prompt,
+              })
+            );
+          } else {
+            throw new Error('WebSocket not connected');
+          }
+        } catch (error) {
+          showAlert(`Error processing prompt: ${error.message}`, 'error');
+          isProcessing = false;
+          updateUI();
+        }
+      }
+
+      function handlePromptResult(result) {
+        isProcessing = false;
+        updateUI();
+
+        if (result.success) {
+          showAlert('Prompt processed successfully!', 'success');
+
+          // Display generated test
+          if (result.results && result.results.length > 0) {
+            const lastResult = result.results[result.results.length - 1];
+            if (lastResult.content && lastResult.content[0]) {
+              const testCode = lastResult.content[0].text;
+              if (testCode.includes('import { test, expect }')) {
+                generatedTest.textContent = testCode;
+                generatedTestContainer.classList.remove('hidden');
+              }
+            }
+          }
+
+          appendToActionLog('✓ All actions completed successfully!');
+        } else {
+          showAlert(`Error: ${result.error}`, 'error');
+        }
+      }
+
+      function updateSessionStatus(active) {
+        if (active) {
+          sessionStatus.textContent = 'Active';
+          sessionStatus.className = 'status active';
+          startSessionBtn.disabled = true;
+          stopSessionBtn.disabled = false;
+          processPromptBtn.disabled = false;
+        } else {
+          sessionStatus.textContent = 'Inactive';
+          sessionStatus.className = 'status inactive';
+          startSessionBtn.disabled = false;
+          stopSessionBtn.disabled = true;
+          processPromptBtn.disabled = true;
+        }
+      }
+
+      function updateUI() {
+        processPromptBtn.disabled =
+          isProcessing || sessionStatus.textContent === 'Inactive';
+        processPromptBtn.textContent = isProcessing
+          ? 'Processing...'
+          : 'Process Prompt';
+      }
+
+      function showLoading(show) {
+        loadingIndicator.classList.toggle('hidden', !show);
+      }
+
+      function showAlert(message, type) {
+        const alert = document.createElement('div');
+        alert.className = `alert ${type}`;
+        alert.textContent = message;
+        alertContainer.appendChild(alert);
+
+        setTimeout(() => {
+          alert.remove();
+        }, 5000);
+      }
+
+      function appendToActionLog(message) {
+        actionLogContent.textContent += message + '\n';
+        actionLog.classList.remove('hidden');
+        actionLog.scrollTop = actionLog.scrollHeight;
+      }
+
+      function clearResults() {
+        alertContainer.innerHTML = '';
+        actionLogContent.textContent = '';
+        actionLog.classList.add('hidden');
+        generatedTestContainer.classList.add('hidden');
+      }
+
+      function setPrompt(text) {
+        promptInput.value = text;
+      }
+
+      function copyTest() {
+        navigator.clipboard.writeText(generatedTest.textContent).then(() => {
+          showAlert('Test code copied to clipboard!', 'success');
+        });
+      }
+
+      // Initialize the page
+      document.addEventListener('DOMContentLoaded', () => {
+        updateUI();
+      });
+    </script>
+  </body>
+</html>
