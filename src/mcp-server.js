@@ -848,7 +848,7 @@ class PlaywrightMCPServer {
       content: [
         {
           type: 'text',
-          text: `Generated Playwright test:\n\n${testCode}`,
+          text: testCode,
         },
       ],
     };
