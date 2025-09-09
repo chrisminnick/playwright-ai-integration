@@ -213,6 +213,18 @@ class PlaywrightMCPServer {
   }
 
   async launchBrowser(headless = false) {
+    // If browser is already running, don't launch a new one
+    if (this.browser) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Browser already running in ${headless ? 'headless' : 'headed'} mode`,
+          },
+        ],
+      };
+    }
+
     this.browser = await chromium.launch({ headless });
     this.page = await this.browser.newPage();
     this.actions = [];

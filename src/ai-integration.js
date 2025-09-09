@@ -9,6 +9,7 @@ export class AIPlaywrightIntegration extends EventEmitter {
     this.mcpProcess = null;
     this.isConnected = false;
     this.messageId = 0;
+    this.browserLaunched = false; // Track if browser has been launched
   }
 
   async startMCPServer() {
@@ -110,6 +111,8 @@ export class AIPlaywrightIntegration extends EventEmitter {
   }
 
   async analyzePrompt(prompt) {
+    const browserStatus = this.browserLaunched ? "Browser is already running." : "No browser is currently running.";
+    
     const completion = await this.openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -139,9 +142,11 @@ For "Go to google.com and search for playwright":
   {"name": "take_screenshot", "arguments": {"filename": "search_results.png"}}
 ]
 
-Always start with launch_browser if not already launched.
+IMPORTANT: Only include launch_browser if this is the first action in a session. For subsequent prompts in the same session, assume the browser is already running and start with navigate_to or other actions.
 Use specific CSS selectors when possible.
-Be practical and realistic about what can be automated.`,
+Be practical and realistic about what can be automated.
+
+Current session status: ${browserStatus}`,
         },
         {
           role: 'user',
@@ -170,6 +175,14 @@ Be practical and realistic about what can be automated.`,
         name: action.name,
         arguments: action.arguments,
       });
+      
+      // Track browser launch state
+      if (action.name === 'launch_browser') {
+        this.browserLaunched = true;
+      } else if (action.name === 'close_browser') {
+        this.browserLaunched = false;
+      }
+      
       return result;
     } catch (error) {
       throw new Error(
@@ -192,15 +205,23 @@ Be practical and realistic about what can be automated.`,
   }
 
   async cleanup() {
-    if (this.mcpProcess) {
-      await this.sendMCPRequest('tools/call', {
-        name: 'close_browser',
-        arguments: {},
-      });
+    if (this.mcpProcess && this.browserLaunched) {
+      try {
+        await this.sendMCPRequest('tools/call', {
+          name: 'close_browser',
+          arguments: {},
+        });
+      } catch (error) {
+        // Ignore errors during cleanup
+        console.warn('Error during browser cleanup:', error.message);
+      }
+    }
 
+    if (this.mcpProcess) {
       this.mcpProcess.kill();
       this.mcpProcess = null;
       this.isConnected = false;
+      this.browserLaunched = false;
     }
   }
 }
