@@ -180,6 +180,17 @@ class PlaywrightMCPServer {
                 type: 'string',
                 description: 'Description of what the test does',
               },
+              actions: {
+                type: 'array',
+                description: 'Array of actions that were executed',
+                items: {
+                  type: 'object',
+                  properties: {
+                    name: { type: 'string' },
+                    arguments: { type: 'object' },
+                  },
+                },
+              },
             },
             required: ['testName'],
           },
@@ -228,7 +239,11 @@ class PlaywrightMCPServer {
             return await this.getPageContent();
 
           case 'generate_test':
-            return await this.generateTest(args.testName, args.description);
+            return await this.generateTest(
+              args.testName,
+              args.description,
+              args.actions
+            );
 
           case 'close_browser':
             return await this.closeBrowser();
@@ -819,11 +834,14 @@ class PlaywrightMCPServer {
     };
   }
 
-  async generateTest(testName, description = '') {
+  async generateTest(testName, description = '', providedActions = null) {
+    // Use provided actions if available, otherwise fall back to internal actions
+    const actionsToUse = providedActions || this.actions;
+
     const testCode = this.generatePlaywrightTest(
       testName,
       description,
-      this.actions
+      actionsToUse
     );
 
     return {
@@ -842,13 +860,68 @@ class PlaywrightMCPServer {
     let testCode = `import { test, expect } from '@playwright/test';\n\n`;
     testCode += `test('${testDescription}', async ({ page }) => {\n`;
 
-    actions.forEach((action) => {
-      testCode += `  ${action.code}\n`;
-    });
+    if (actions && actions.length > 0) {
+      actions.forEach((action) => {
+        // Handle both internal MCP actions (with .code) and AI integration actions (with .name and .arguments)
+        if (action.code) {
+          // Internal MCP action format
+          testCode += `  ${action.code}\n`;
+        } else if (action.name && action.arguments) {
+          // AI integration action format - convert to Playwright code
+          const playwrightCode = this.convertActionToPlaywrightCode(action);
+          if (playwrightCode) {
+            testCode += `  ${playwrightCode}\n`;
+          }
+        }
+      });
+    }
 
     testCode += `});\n`;
 
     return testCode;
+  }
+
+  convertActionToPlaywrightCode(action) {
+    switch (action.name) {
+      case 'launch_browser':
+        // Browser launch is handled by Playwright test framework, not needed in test code
+        return null;
+
+      case 'navigate_to':
+        return `await page.goto('${action.arguments.url}');`;
+
+      case 'click_element':
+        return `await page.click('${action.arguments.selector}');`;
+
+      case 'fill_input':
+        return `await page.fill('${action.arguments.selector}', '${action.arguments.text}');`;
+
+      case 'wait_for_element':
+        return `await page.waitForSelector('${action.arguments.selector}');`;
+
+      case 'take_screenshot':
+        const filename = action.arguments.filename || 'screenshot.png';
+        return `await page.screenshot({ path: '${filename}' });`;
+
+      case 'github_search':
+        // For GitHub search, we'll convert it to manual steps
+        return `await page.fill('[data-target="query-builder.input"]', '${action.arguments.query}');\n  await page.press('[data-target="query-builder.input"]', 'Enter');`;
+
+      case 'inspect_page':
+        // Inspection actions don't translate to test code
+        return null;
+
+      case 'get_page_content':
+        // Content retrieval doesn't translate to test code
+        return null;
+
+      case 'close_browser':
+        // Browser closing is handled by Playwright test framework
+        return null;
+
+      default:
+        return `// Unsupported action: ${action.name}`;
+    }
   }
 
   async closeBrowser() {

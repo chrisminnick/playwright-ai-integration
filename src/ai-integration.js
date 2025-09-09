@@ -89,6 +89,7 @@ export class AIPlaywrightIntegration extends EventEmitter {
           arguments: {
             testName: this.extractTestName(prompt),
             description: prompt,
+            actions: actions, // Pass the actions that were executed
           },
         });
         results.push(testResult);
