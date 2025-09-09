@@ -123,6 +123,8 @@ export class AIPlaywrightIntegration extends EventEmitter {
 Available actions:
 - launch_browser: Launch browser (specify headless: true/false)
 - navigate_to: Navigate to URL
+- inspect_page: Inspect page for forms, inputs, buttons (elementType: "forms", "inputs", "buttons", or "all")
+- github_search: Specialized search for GitHub (use this instead of manual search on GitHub)
 - click_element: Click element by selector
 - fill_input: Fill input field with text
 - wait_for_element: Wait for element to appear
@@ -142,7 +144,38 @@ For "Go to google.com and search for playwright":
   {"name": "take_screenshot", "arguments": {"filename": "search_results.png"}}
 ]
 
-IMPORTANT: Only include launch_browser if this is the first action in a session. For subsequent prompts in the same session, assume the browser is already running and start with navigate_to or other actions.
+For GitHub navigation and search:
+[
+  {"name": "navigate_to", "arguments": {"url": "https://github.com"}},
+  {"name": "github_search", "arguments": {"query": "microsoft/playwright"}},
+  {"name": "take_screenshot", "arguments": {"filename": "github_search_results.png"}}
+]
+
+For manual GitHub search (fallback):
+[
+  {"name": "navigate_to", "arguments": {"url": "https://github.com"}},
+  {"name": "inspect_page", "arguments": {"elementType": "inputs"}},
+  {"name": "click_element", "arguments": {"selector": "[data-target='query-builder.input']"}},
+  {"name": "fill_input", "arguments": {"selector": "[data-target='query-builder.input']", "text": "microsoft/playwright"}},
+  {"name": "wait_for_element", "arguments": {"selector": "[data-testid='results-list']"}},
+  {"name": "take_screenshot", "arguments": {"filename": "github_search_results.png"}}
+]
+
+For form filling tasks:
+1. First navigate to the page
+2. Use inspect_page with elementType "forms" or "all" to discover form structure
+3. Use the inspection results to generate accurate selectors for form fields
+4. Fill inputs using the discovered selectors
+5. Submit the form using the discovered submit button selector
+
+For GitHub search tasks:
+1. Navigate to github.com
+2. Use github_search tool with the search query (this handles GitHub's complex search interface automatically)
+3. Optionally take a screenshot of results
+
+IMPORTANT: When working with forms, ALWAYS use inspect_page first to understand the form structure before attempting to fill or submit. This ensures accurate selectors.
+For GitHub searches, ALWAYS use the github_search tool instead of manual clicking and filling - it's specifically designed to handle GitHub's dynamic search interface.
+Only include launch_browser if this is the first action in a session. For subsequent prompts in the same session, assume the browser is already running and start with navigate_to or other actions.
 Use specific CSS selectors when possible.
 Be practical and realistic about what can be automated.
 
