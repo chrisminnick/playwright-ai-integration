@@ -137,7 +137,8 @@ class PlaywrightMCPServer {
         },
         {
           name: 'github_search',
-          description: 'Specialized search function for GitHub that handles the dynamic search interface',
+          description:
+            'Specialized search function for GitHub that handles the dynamic search interface',
           inputSchema: {
             type: 'object',
             properties: {
@@ -151,13 +152,15 @@ class PlaywrightMCPServer {
         },
         {
           name: 'inspect_page',
-          description: 'Inspect the current page for forms, inputs, and interactive elements',
+          description:
+            'Inspect the current page for forms, inputs, and interactive elements',
           inputSchema: {
             type: 'object',
             properties: {
               elementType: {
                 type: 'string',
-                description: 'Type of elements to inspect: "forms", "inputs", "buttons", or "all"',
+                description:
+                  'Type of elements to inspect: "forms", "inputs", "buttons", or "all"',
                 default: 'all',
               },
             },
@@ -253,7 +256,9 @@ class PlaywrightMCPServer {
         content: [
           {
             type: 'text',
-            text: `Browser already running in ${headless ? 'headless' : 'headed'} mode`,
+            text: `Browser already running in ${
+              headless ? 'headless' : 'headed'
+            } mode`,
           },
         ],
       };
@@ -309,14 +314,14 @@ class PlaywrightMCPServer {
         'input[placeholder*="Search"]',
         'input[aria-label*="Search"]',
         'button[type="submit"]',
-        '[data-testid="search-button"]'
-      ]
+        '[data-testid="search-button"]',
+      ],
     };
 
     // Determine site type and get alternative selectors
     const url = await this.page.url();
     let selectorsToTry = [selector];
-    
+
     if (url.includes('github.com')) {
       selectorsToTry = [...alternativeSelectors.github, selector];
     }
@@ -326,26 +331,31 @@ class PlaywrightMCPServer {
     for (const currentSelector of selectorsToTry) {
       try {
         // Wait for element to be visible and clickable
-        await this.page.waitForSelector(currentSelector, { timeout: Math.min(timeout, 5000), state: 'visible' });
-        
+        await this.page.waitForSelector(currentSelector, {
+          timeout: Math.min(timeout, 5000),
+          state: 'visible',
+        });
+
         const element = await this.page.locator(currentSelector);
         const isVisible = await element.isVisible();
         const isEnabled = await element.isEnabled();
-        
+
         if (!isVisible) {
           throw new Error(`Element ${currentSelector} is not visible`);
         }
-        
+
         if (!isEnabled) {
-          throw new Error(`Element ${currentSelector} is not enabled/clickable`);
+          throw new Error(
+            `Element ${currentSelector} is not enabled/clickable`
+          );
         }
 
         // Scroll element into view if needed
         await element.scrollIntoViewIfNeeded();
-        
+
         // Click the element
         await element.click();
-        
+
         this.actions.push({
           type: 'click',
           selector: currentSelector,
@@ -368,24 +378,35 @@ class PlaywrightMCPServer {
 
     // If all selectors failed, provide detailed error information
     try {
-      const clickableElements = await this.page.$$eval('button, input[type="submit"], input[type="button"], a, [onclick], [data-target]', elements => 
-        elements.map(el => ({
-          tag: el.tagName,
-          type: el.type || '',
-          text: el.textContent?.trim()?.substring(0, 50) || '',
-          id: el.id || '',
-          class: el.className || '',
-          name: el.name || '',
-          'data-target': el.getAttribute('data-target') || '',
-          'aria-label': el.getAttribute('aria-label') || ''
-        }))
+      const clickableElements = await this.page.$$eval(
+        'button, input[type="submit"], input[type="button"], a, [onclick], [data-target]',
+        (elements) =>
+          elements.map((el) => ({
+            tag: el.tagName,
+            type: el.type || '',
+            text: el.textContent?.trim()?.substring(0, 50) || '',
+            id: el.id || '',
+            class: el.className || '',
+            name: el.name || '',
+            'data-target': el.getAttribute('data-target') || '',
+            'aria-label': el.getAttribute('aria-label') || '',
+          }))
       );
 
-      throw new Error(`Failed to click element with any selector: ${selectorsToTry.join(', ')}. Last error: ${lastError.message}. Available clickable elements: ${JSON.stringify(clickableElements)}`);
+      throw new Error(
+        `Failed to click element with any selector: ${selectorsToTry.join(
+          ', '
+        )}. Last error: ${
+          lastError.message
+        }. Available clickable elements: ${JSON.stringify(clickableElements)}`
+      );
     } catch (evalError) {
-      throw new Error(`Failed to click element ${selector}: ${lastError.message}. Could not inspect available elements: ${evalError.message}`);
+      throw new Error(
+        `Failed to click element ${selector}: ${lastError.message}. Could not inspect available elements: ${evalError.message}`
+      );
     }
-  }  async fillInput(selector, text) {
+  }
+  async fillInput(selector, text) {
     if (!this.page) {
       throw new Error('Browser not launched. Call launch_browser first.');
     }
@@ -397,19 +418,19 @@ class PlaywrightMCPServer {
         'input[name="q"]',
         '#query-builder-test',
         'input[placeholder*="Search"]',
-        'input[aria-label*="Search"]'
+        'input[aria-label*="Search"]',
       ],
       google: [
         'input[name="q"]',
         'textarea[name="q"]',
-        'input[title="Search"]'
-      ]
+        'input[title="Search"]',
+      ],
     };
 
     // Determine site type
     const url = await this.page.url();
     let selectorsToTry = [selector];
-    
+
     if (url.includes('github.com')) {
       selectorsToTry = [...alternativeSelectors.github, selector];
     } else if (url.includes('google.com')) {
@@ -422,12 +443,15 @@ class PlaywrightMCPServer {
     for (const currentSelector of selectorsToTry) {
       try {
         // First, try to wait for the element to be visible
-        await this.page.waitForSelector(currentSelector, { timeout: 5000, state: 'visible' });
-        
+        await this.page.waitForSelector(currentSelector, {
+          timeout: 5000,
+          state: 'visible',
+        });
+
         // Check if element exists and is visible
         const element = await this.page.locator(currentSelector);
         const isVisible = await element.isVisible();
-        
+
         if (!isVisible) {
           throw new Error(`Element ${currentSelector} is not visible`);
         }
@@ -435,10 +459,10 @@ class PlaywrightMCPServer {
         // Clear the field first, then fill it
         await this.page.fill(currentSelector, '');
         await this.page.fill(currentSelector, text);
-        
+
         // Verify the text was actually filled
         const filledValue = await this.page.inputValue(currentSelector);
-        
+
         successfulSelector = currentSelector;
         this.actions.push({
           type: 'fill',
@@ -464,22 +488,32 @@ class PlaywrightMCPServer {
 
     // If all selectors failed, provide detailed error information
     try {
-      const inputs = await this.page.$$eval('input, textarea, select', elements => 
-        elements.map(el => ({
-          tag: el.tagName,
-          type: el.type || 'text',
-          name: el.name || '',
-          id: el.id || '',
-          placeholder: el.placeholder || '',
-          'data-target': el.getAttribute('data-target') || '',
-          'aria-label': el.getAttribute('aria-label') || '',
-          required: el.required || false
-        }))
+      const inputs = await this.page.$$eval(
+        'input, textarea, select',
+        (elements) =>
+          elements.map((el) => ({
+            tag: el.tagName,
+            type: el.type || 'text',
+            name: el.name || '',
+            id: el.id || '',
+            placeholder: el.placeholder || '',
+            'data-target': el.getAttribute('data-target') || '',
+            'aria-label': el.getAttribute('aria-label') || '',
+            required: el.required || false,
+          }))
       );
 
-      throw new Error(`Failed to fill input with any selector: ${selectorsToTry.join(', ')}. Last error: ${lastError.message}. Available inputs: ${JSON.stringify(inputs)}`);
+      throw new Error(
+        `Failed to fill input with any selector: ${selectorsToTry.join(
+          ', '
+        )}. Last error: ${
+          lastError.message
+        }. Available inputs: ${JSON.stringify(inputs)}`
+      );
     } catch (evalError) {
-      throw new Error(`Failed to fill input ${selector}: ${lastError.message}. Could not inspect available inputs: ${evalError.message}`);
+      throw new Error(
+        `Failed to fill input ${selector}: ${lastError.message}. Could not inspect available inputs: ${evalError.message}`
+      );
     }
   }
 
@@ -543,14 +577,17 @@ class PlaywrightMCPServer {
             '#query-builder-test',
             'input[placeholder*="Search"]',
             'input[aria-label*="Search"]',
-            '.js-site-search-focus'
+            '.js-site-search-focus',
           ];
 
           for (const selector of searchSelectors) {
             try {
-              await this.page.waitForSelector(selector, { timeout: 3000, state: 'visible' });
+              await this.page.waitForSelector(selector, {
+                timeout: 3000,
+                state: 'visible',
+              });
               const element = await this.page.locator(selector);
-              
+
               if (await element.isVisible()) {
                 await element.click();
                 await element.fill(query);
@@ -575,10 +612,12 @@ class PlaywrightMCPServer {
 
         // Strategy 3: Navigate directly to search URL
         async () => {
-          const searchUrl = `https://github.com/search?q=${encodeURIComponent(query)}`;
+          const searchUrl = `https://github.com/search?q=${encodeURIComponent(
+            query
+          )}`;
           await this.page.goto(searchUrl);
           return 'direct-url';
-        }
+        },
       ];
 
       let usedStrategy = null;
@@ -595,12 +634,17 @@ class PlaywrightMCPServer {
       }
 
       if (!usedStrategy) {
-        throw new Error(`All GitHub search strategies failed. Last error: ${lastError.message}`);
+        throw new Error(
+          `All GitHub search strategies failed. Last error: ${lastError.message}`
+        );
       }
 
       // Wait for search results to load
       try {
-        await this.page.waitForSelector('[data-testid="results-list"], .repo-list, .search-results', { timeout: 10000 });
+        await this.page.waitForSelector(
+          '[data-testid="results-list"], .repo-list, .search-results',
+          { timeout: 10000 }
+        );
       } catch (e) {
         // Sometimes results load without these specific selectors
         await this.page.waitForTimeout(2000);
@@ -621,13 +665,14 @@ class PlaywrightMCPServer {
           },
         ],
       };
-
     } catch (error) {
       // Provide debug information
       const currentUrl = await this.page.url();
       const pageTitle = await this.page.title();
-      
-      throw new Error(`GitHub search failed: ${error.message}. Current URL: ${currentUrl}, Page title: ${pageTitle}`);
+
+      throw new Error(
+        `GitHub search failed: ${error.message}. Current URL: ${currentUrl}, Page title: ${pageTitle}`
+      );
     }
   }
 
@@ -643,7 +688,7 @@ class PlaywrightMCPServer {
         forms: [],
         inputs: [],
         buttons: [],
-        links: []
+        links: [],
       };
 
       if (type === 'all' || type === 'forms') {
@@ -654,7 +699,10 @@ class PlaywrightMCPServer {
             id: form.id || '',
             action: form.action || '',
             method: form.method || 'GET',
-            selectors: [`form:nth-of-type(${index + 1})`, form.id ? `#${form.id}` : ''].filter(Boolean)
+            selectors: [
+              `form:nth-of-type(${index + 1})`,
+              form.id ? `#${form.id}` : '',
+            ].filter(Boolean),
           };
           result.forms.push(formData);
         });
@@ -665,14 +713,19 @@ class PlaywrightMCPServer {
         inputs.forEach((input, index) => {
           // Find associated label
           let labelText = '';
-          const label = input.id ? document.querySelector(`label[for="${input.id}"]`) : null;
+          const label = input.id
+            ? document.querySelector(`label[for="${input.id}"]`)
+            : null;
           if (label) {
             labelText = label.textContent?.trim() || '';
           } else {
             // Check if input is inside a label
             const parentLabel = input.closest('label');
             if (parentLabel) {
-              labelText = parentLabel.textContent?.replace(input.value || '', '').trim() || '';
+              labelText =
+                parentLabel.textContent
+                  ?.replace(input.value || '', '')
+                  .trim() || '';
             }
           }
 
@@ -690,16 +743,20 @@ class PlaywrightMCPServer {
               input.id ? `#${input.id}` : '',
               input.name ? `[name="${input.name}"]` : '',
               input.placeholder ? `[placeholder="${input.placeholder}"]` : '',
-              labelText && input.type !== 'hidden' ? `label:has-text("${labelText}") >> input` : '',
-              `${input.tagName.toLowerCase()}:nth-of-type(${index + 1})`
-            ].filter(Boolean)
+              labelText && input.type !== 'hidden'
+                ? `label:has-text("${labelText}") >> input`
+                : '',
+              `${input.tagName.toLowerCase()}:nth-of-type(${index + 1})`,
+            ].filter(Boolean),
           };
           result.inputs.push(inputData);
         });
       }
 
       if (type === 'all' || type === 'buttons') {
-        const buttons = document.querySelectorAll('button, input[type="submit"], input[type="button"], input[type="reset"]');
+        const buttons = document.querySelectorAll(
+          'button, input[type="submit"], input[type="button"], input[type="reset"]'
+        );
         buttons.forEach((button, index) => {
           const buttonData = {
             index,
@@ -712,9 +769,11 @@ class PlaywrightMCPServer {
             selectors: [
               button.id ? `#${button.id}` : '',
               button.name ? `[name="${button.name}"]` : '',
-              button.textContent?.trim() ? `text="${button.textContent.trim()}"` : '',
-              `${button.tagName.toLowerCase()}:nth-of-type(${index + 1})`
-            ].filter(Boolean)
+              button.textContent?.trim()
+                ? `text="${button.textContent.trim()}"`
+                : '',
+              `${button.tagName.toLowerCase()}:nth-of-type(${index + 1})`,
+            ].filter(Boolean),
           };
           result.buttons.push(buttonData);
         });
@@ -727,7 +786,15 @@ class PlaywrightMCPServer {
       content: [
         {
           type: 'text',
-          text: `Page inspection complete. Found ${inspection.forms.length} forms, ${inspection.inputs.length} inputs, ${inspection.buttons.length} buttons.\n\nDetailed inspection:\n${JSON.stringify(inspection, null, 2)}`,
+          text: `Page inspection complete. Found ${
+            inspection.forms.length
+          } forms, ${inspection.inputs.length} inputs, ${
+            inspection.buttons.length
+          } buttons.\n\nDetailed inspection:\n${JSON.stringify(
+            inspection,
+            null,
+            2
+          )}`,
         },
       ],
     };

@@ -111,8 +111,10 @@ export class AIPlaywrightIntegration extends EventEmitter {
   }
 
   async analyzePrompt(prompt) {
-    const browserStatus = this.browserLaunched ? "Browser is already running." : "No browser is currently running.";
-    
+    const browserStatus = this.browserLaunched
+      ? 'Browser is already running.'
+      : 'No browser is currently running.';
+
     const completion = await this.openai.chat.completions.create({
       model: 'gpt-4',
       messages: [
@@ -208,14 +210,14 @@ Current session status: ${browserStatus}`,
         name: action.name,
         arguments: action.arguments,
       });
-      
+
       // Track browser launch state
       if (action.name === 'launch_browser') {
         this.browserLaunched = true;
       } else if (action.name === 'close_browser') {
         this.browserLaunched = false;
       }
-      
+
       return result;
     } catch (error) {
       throw new Error(
