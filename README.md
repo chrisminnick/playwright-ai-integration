@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/chrisminnick-playwright-ai-integration-badge.png)](https://mseep.ai/app/chrisminnick-playwright-ai-integration)
+
 # Playwright AI Integration
 
 A powerful integration that allows you to submit natural language prompts to an AI chatbot, which will use a browser through an MCP (Model Context Protocol) server to perform actions and generate Playwright tests automatically.
