@@ -259,10 +259,12 @@ DEBUG=* npm start
 
 This project is licensed under the MIT License.
 
-[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/07daa573-59a7-4fe3-bba3-c0722492bd90)
 
 ## Acknowledgments
 
 - [Playwright](https://playwright.dev/) for browser automation
 - [OpenAI](https://openai.com/) for AI capabilities
 - [Model Context Protocol](https://github.com/modelcontextprotocol) for the integration framework
+
+[![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/07daa573-59a7-4fe3-bba3-c0722492bd90)
+
