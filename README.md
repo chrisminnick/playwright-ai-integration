@@ -2,7 +2,7 @@
 
 # Playwright AI Integration
 
-A powerful integration that allows you to submit natural language prompts to an AI chatbot, which will use a browser through an MCP (Model Context Protocol) server to perform actions and generate Playwright tests automatically.
+Submit natural language prompts to an AI chatbot, which will use a browser through an MCP (Model Context Protocol) server to perform actions and generate Playwright tests automatically.
 
 ## Features
 
