@@ -24,14 +24,17 @@ async function testSubmitFormTool() {
     console.log('✅ MCP server started successfully\n');
 
     // Test the new submit_form tool specifically
-    const testPrompt = 'Go to httpbin.org/forms/post, fill the customer name with "John Doe" and email with "john@example.com", then use the submit_form tool to submit the form';
+    const testPrompt =
+      'Go to httpbin.org/forms/post, fill the customer name with "John Doe" and email with "john@example.com", then use the submit_form tool to submit the form';
     console.log(`🤖 Processing prompt: "${testPrompt}"`);
 
     // Set up event listener for real-time updates
     integration.on('actionExecuted', (data) => {
       console.log(`   ⚡ Executed: ${data.action.name}`);
       if (data.action.name === 'submit_form') {
-        console.log(`      Strategy used: ${data.result.content[0]?.text || 'unknown'}`);
+        console.log(
+          `      Strategy used: ${data.result.content[0]?.text || 'unknown'}`
+        );
       }
     });
 
@@ -41,9 +44,11 @@ async function testSubmitFormTool() {
       console.log('\n✅ submit_form tool test completed successfully!');
       console.log('\n📋 Actions taken:');
       console.log('═'.repeat(50));
-      
+
       result.executedActions.forEach((action, index) => {
-        console.log(`${index + 1}. ${action.name}: ${JSON.stringify(action.arguments)}`);
+        console.log(
+          `${index + 1}. ${action.name}: ${JSON.stringify(action.arguments)}`
+        );
       });
       console.log('═'.repeat(50));
     } else {

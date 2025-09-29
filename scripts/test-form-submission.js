@@ -24,12 +24,17 @@ async function testFormSubmission() {
     console.log('✅ MCP server started successfully\n');
 
     // Test form submission on httpbin.org
-    const testPrompt = 'Go to httpbin.org/forms/post, fill in the form with sample data, and submit it';
+    const testPrompt =
+      'Go to httpbin.org/forms/post, fill in the form with sample data, and submit it';
     console.log(`🤖 Processing prompt: "${testPrompt}"`);
 
     // Set up event listener for real-time updates
     integration.on('actionExecuted', (data) => {
-      console.log(`   ⚡ Executed: ${data.action.name} - ${JSON.stringify(data.action.arguments)}`);
+      console.log(
+        `   ⚡ Executed: ${data.action.name} - ${JSON.stringify(
+          data.action.arguments
+        )}`
+      );
     });
 
     const result = await integration.processPrompt(testPrompt);
@@ -38,9 +43,11 @@ async function testFormSubmission() {
       console.log('\n✅ Form submission test completed successfully!');
       console.log('\n📋 Actions taken:');
       console.log('═'.repeat(50));
-      
+
       result.executedActions.forEach((action, index) => {
-        console.log(`${index + 1}. ${action.name}: ${JSON.stringify(action.arguments)}`);
+        console.log(
+          `${index + 1}. ${action.name}: ${JSON.stringify(action.arguments)}`
+        );
       });
 
       // Extract the generated test code from results
