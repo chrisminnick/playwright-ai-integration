@@ -196,6 +196,24 @@ class PlaywrightMCPServer {
           },
         },
         {
+          name: 'submit_form',
+          description: 'Submit a form by finding and clicking its submit button',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              formSelector: {
+                type: 'string',
+                description: 'CSS selector for the form (optional - will find first form if not specified)',
+              },
+              timeout: {
+                type: 'number',
+                description: 'Timeout in milliseconds',
+                default: 30000,
+              },
+            },
+          },
+        },
+        {
           name: 'close_browser',
           description: 'Close the browser instance',
           inputSchema: {
@@ -244,6 +262,9 @@ class PlaywrightMCPServer {
               args.description,
               args.actions
             );
+
+          case 'submit_form':
+            return await this.submitForm(args?.formSelector, args?.timeout);
 
           case 'close_browser':
             return await this.closeBrowser();
@@ -320,7 +341,7 @@ class PlaywrightMCPServer {
       throw new Error('Browser not launched. Call launch_browser first.');
     }
 
-    // Common alternative selectors for popular sites
+    // Common alternative selectors for popular sites and general form elements
     const alternativeSelectors = {
       github: [
         '[data-target="query-builder.input"]',
@@ -331,6 +352,22 @@ class PlaywrightMCPServer {
         'button[type="submit"]',
         '[data-testid="search-button"]',
       ],
+      // General submit button selectors for any form
+      submit: [
+        'button[type="submit"]',
+        'input[type="submit"]',
+        'button:not([type])', // buttons without type attribute default to submit in forms
+        'button[form]', // buttons with form attribute
+        'input[type="button"][value*="submit" i]',
+        'input[type="button"][value*="send" i]',
+        'input[type="button"][value*="go" i]',
+        'button:has-text("Submit")',
+        'button:has-text("Send")',
+        'button:has-text("Go")',
+        'button:has-text("Search")',
+        '[role="button"][type="submit"]',
+        '[role="button"]:has-text("Submit")',
+      ],
     };
 
     // Determine site type and get alternative selectors
@@ -339,6 +376,26 @@ class PlaywrightMCPServer {
 
     if (url.includes('github.com')) {
       selectorsToTry = [...alternativeSelectors.github, selector];
+    }
+    
+    // If the original selector looks like a submit button selector, add general submit alternatives
+    if (selector.includes('submit') || selector.includes('Submit') || 
+        selector.includes('input[type="submit"]') || selector.includes('button[type="submit"]')) {
+      selectorsToTry = [selector, ...alternativeSelectors.submit];
+    }
+    
+    // Also check if we're in a form context and the selector might be for submission
+    try {
+      const isInForm = await this.page.evaluate(() => {
+        return document.querySelector('form') !== null;
+      });
+      
+      if (isInForm && (selector.includes('submit') || selector.includes('button') || selector.includes('input'))) {
+        // Add submit alternatives if we're in a form context
+        selectorsToTry = [...selectorsToTry, ...alternativeSelectors.submit];
+      }
+    } catch (e) {
+      // If evaluation fails, continue with current selectors
     }
 
     let lastError = null;
@@ -394,17 +451,22 @@ class PlaywrightMCPServer {
     // If all selectors failed, provide detailed error information
     try {
       const clickableElements = await this.page.$$eval(
-        'button, input[type="submit"], input[type="button"], a, [onclick], [data-target]',
+        'button, input[type="submit"], input[type="button"], input[type="reset"], a, [onclick], [data-target], [role="button"]',
         (elements) =>
           elements.map((el) => ({
             tag: el.tagName,
             type: el.type || '',
             text: el.textContent?.trim()?.substring(0, 50) || '',
+            value: el.value || '',
             id: el.id || '',
             class: el.className || '',
             name: el.name || '',
             'data-target': el.getAttribute('data-target') || '',
             'aria-label': el.getAttribute('aria-label') || '',
+            role: el.getAttribute('role') || '',
+            form: el.form ? 'in-form' : 'no-form',
+            disabled: el.disabled ? 'disabled' : 'enabled',
+            visible: el.offsetParent !== null ? 'visible' : 'hidden',
           }))
       );
 
@@ -915,12 +977,145 @@ class PlaywrightMCPServer {
         // Content retrieval doesn't translate to test code
         return null;
 
+      case 'submit_form':
+        const formSel = action.arguments.formSelector || 'form';
+        return `await page.locator('${formSel}').locator('button[type="submit"], input[type="submit"], button:not([type])').first().click();`;
+
       case 'close_browser':
         // Browser closing is handled by Playwright test framework
         return null;
 
       default:
         return `// Unsupported action: ${action.name}`;
+    }
+  }
+
+  async submitForm(formSelector = null, timeout = 30000) {
+    if (!this.page) {
+      throw new Error('Browser not launched. Call launch_browser first.');
+    }
+
+    try {
+      // First, find the form
+      let form;
+      if (formSelector) {
+        form = await this.page.locator(formSelector);
+      } else {
+        // Find the first form on the page
+        form = await this.page.locator('form').first();
+      }
+
+      // Check if form exists
+      const formExists = await form.count() > 0;
+      if (!formExists) {
+        throw new Error(`No form found${formSelector ? ` with selector: ${formSelector}` : ''}`);
+      }
+
+      // Try multiple strategies to submit the form
+      const submitStrategies = [
+        // Strategy 1: Find submit button within the form
+        async () => {
+          const submitButton = form.locator('button[type="submit"], input[type="submit"]').first();
+          if (await submitButton.count() > 0) {
+            await submitButton.click();
+            return 'form-submit-button';
+          }
+          throw new Error('No submit button found in form');
+        },
+
+        // Strategy 2: Find any button without type (defaults to submit in forms)
+        async () => {
+          const button = form.locator('button:not([type])').first();
+          if (await button.count() > 0) {
+            await button.click();
+            return 'form-default-button';
+          }
+          throw new Error('No default button found in form');
+        },
+
+        // Strategy 3: Find button with submit-like text
+        async () => {
+          const submitButton = form.locator('button:has-text("Submit"), button:has-text("Send"), button:has-text("Go")').first();
+          if (await submitButton.count() > 0) {
+            await submitButton.click();
+            return 'form-text-button';
+          }
+          throw new Error('No button with submit text found');
+        },
+
+        // Strategy 4: Find any button in the form
+        async () => {
+          const anyButton = form.locator('button').first();
+          if (await anyButton.count() > 0) {
+            await anyButton.click();
+            return 'form-any-button';
+          }
+          throw new Error('No buttons found in form');
+        },
+
+        // Strategy 5: Press Enter on the form (works for many forms)
+        async () => {
+          await form.press('Enter');
+          return 'form-enter-key';
+        },
+      ];
+
+      let usedStrategy = null;
+      let lastError = null;
+
+      for (const strategy of submitStrategies) {
+        try {
+          usedStrategy = await strategy();
+          break;
+        } catch (error) {
+          lastError = error;
+          continue;
+        }
+      }
+
+      if (!usedStrategy) {
+        // Get detailed form information for debugging
+        const formInfo = await this.page.evaluate((selector) => {
+          const formElement = selector ? document.querySelector(selector) : document.querySelector('form');
+          if (!formElement) return null;
+
+          return {
+            action: formElement.action || '',
+            method: formElement.method || 'GET',
+            buttons: Array.from(formElement.querySelectorAll('button, input[type="button"], input[type="submit"]')).map(btn => ({
+              tag: btn.tagName,
+              type: btn.type || '',
+              text: btn.textContent?.trim() || btn.value || '',
+              id: btn.id || '',
+              name: btn.name || '',
+            })),
+            inputs: Array.from(formElement.querySelectorAll('input, textarea, select')).length,
+          };
+        }, formSelector);
+
+        throw new Error(
+          `Failed to submit form using any strategy. Last error: ${lastError.message}. Form info: ${JSON.stringify(formInfo)}`
+        );
+      }
+
+      this.actions.push({
+        type: 'submit_form',
+        formSelector: formSelector || 'form:first',
+        strategy: usedStrategy,
+        code: `await page.locator('${formSelector || 'form'}').locator('button[type="submit"], input[type="submit"], button:not([type])').first().click();`,
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Successfully submitted form using strategy: ${usedStrategy}`,
+          },
+        ],
+      };
+
+    } catch (error) {
+      throw new Error(`Form submission failed: ${error.message}`);
     }
   }
 
@@ -935,7 +1130,7 @@ class PlaywrightMCPServer {
         content: [
           {
             type: 'text',
-            text: 'Browser closed successfully',
+          text: 'Browser closed successfully',
           },
         ],
       };
