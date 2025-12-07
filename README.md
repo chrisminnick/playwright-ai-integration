@@ -203,6 +203,9 @@ npm run test:ui
 ### Environment Variables
 
 - `OPENAI_API_KEY` - Your OpenAI API key (required)
+- `OPENAI_MODEL` - OpenAI model to use (default: gpt-4o-mini)
+  - Options: `gpt-4o-mini`, `gpt-4o`, `gpt-4-turbo`, `gpt-3.5-turbo`
+  - Note: `gpt-4o-mini` is recommended for better availability and lower costs
 - `PORT` - Server port (default: 3000)
 - `HEADLESS` - Run browser in headless mode (default: false)
 
@@ -230,12 +233,24 @@ The project includes a `playwright.config.js` file with optimized settings for:
    - Run `npm run install-browsers` to install Playwright browsers
    - Check system permissions for browser execution
 
-3. **OpenAI API errors:**
+3. **429 Rate Limit Error:**
+
+   This error indicates you've hit OpenAI's rate limits. Solutions:
+
+   - **Use a different model:** Add `OPENAI_MODEL=gpt-4o-mini` to your `.env` file
+     - `gpt-4o-mini` has higher rate limits and is more cost-effective
+   - **Wait and retry:** The system now includes automatic retry logic with exponential backoff
+   - **Check your tier:** New OpenAI accounts have lower rate limits. Upgrade at https://platform.openai.com/account/billing
+   - **Monitor usage:** Check your current limits at https://platform.openai.com/account/rate-limits
+   - **Generate new API key:** Sometimes old keys have cached rate limit states
+
+4. **OpenAI API errors:**
 
    - Verify your API key is correct and has sufficient credits
    - Check your OpenAI API usage limits
+   - Ensure you're using a supported model (see OPENAI_MODEL in Environment Variables)
 
-4. **Element not found errors:**
+5. **Element not found errors:**
    - The AI might generate selectors that don't exist on the target page
    - Try more specific prompts or different selector strategies
 
@@ -259,7 +274,6 @@ DEBUG=* npm start
 
 This project is licensed under the MIT License.
 
-
 ## Acknowledgments
 
 - [Playwright](https://playwright.dev/) for browser automation
@@ -267,4 +281,3 @@ This project is licensed under the MIT License.
 - [Model Context Protocol](https://github.com/modelcontextprotocol) for the integration framework
 
 [![Verified on MseeP](https://mseep.ai/badge.svg)](https://mseep.ai/app/07daa573-59a7-4fe3-bba3-c0722492bd90)
-

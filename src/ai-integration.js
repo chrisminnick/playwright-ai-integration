@@ -71,7 +71,9 @@ export class AIPlaywrightIntegration extends EventEmitter {
   async processPrompt(prompt) {
     try {
       // First, analyze the prompt with AI to extract actions
+      console.log('Analyzing prompt with OpenAI...');
       const actions = await this.analyzePrompt(prompt);
+      console.log('Actions received:', actions);
 
       // Execute the actions through MCP
       const results = [];
@@ -103,9 +105,11 @@ export class AIPlaywrightIntegration extends EventEmitter {
         message: 'Actions executed successfully and test generated',
       };
     } catch (error) {
+      console.error('Error processing prompt:', error);
       return {
         success: false,
         error: error.message,
+        errorDetails: error.stack,
         prompt,
       };
     }
@@ -116,12 +120,18 @@ export class AIPlaywrightIntegration extends EventEmitter {
       ? 'Browser is already running.'
       : 'No browser is currently running.';
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: `You are an AI assistant that converts natural language prompts into structured browser automation actions.
+    // Retry logic for rate limit errors
+    const maxRetries = 3;
+    let lastError = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const completion = await this.openai.chat.completions.create({
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini', // Configurable model, defaults to gpt-4o-mini
+          messages: [
+            {
+              role: 'system',
+              content: `You are an AI assistant that converts natural language prompts into structured browser automation actions.
 
 Available actions:
 - launch_browser: Launch browser (specify headless: true/false)
@@ -183,26 +193,59 @@ Use specific CSS selectors when possible.
 Be practical and realistic about what can be automated.
 
 Current session status: ${browserStatus}`,
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      temperature: 0.1,
-    });
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.1,
+        });
 
-    try {
-      const actionsText = completion.choices[0].message.content;
-      // Extract JSON from the response if it's wrapped in markdown
-      const jsonMatch = actionsText.match(
-        /```(?:json)?\s*(\[[\s\S]*?\])\s*```/
-      );
-      const jsonText = jsonMatch ? jsonMatch[1] : actionsText;
-      return JSON.parse(jsonText);
-    } catch (error) {
-      throw new Error(`Failed to parse AI response: ${error.message}`);
+        try {
+          const actionsText = completion.choices[0].message.content;
+          // Extract JSON from the response if it's wrapped in markdown
+          const jsonMatch = actionsText.match(
+            /```(?:json)?\s*(\[[\s\S]*?\])\s*```/
+          );
+          const jsonText = jsonMatch ? jsonMatch[1] : actionsText;
+          return JSON.parse(jsonText);
+        } catch (error) {
+          throw new Error(`Failed to parse AI response: ${error.message}`);
+        }
+      } catch (error) {
+        lastError = error;
+
+        // Check if it's a rate limit error (429)
+        if (error.status === 429) {
+          const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff
+          console.warn(
+            `Rate limit hit (attempt ${
+              attempt + 1
+            }/${maxRetries}). Waiting ${waitTime}ms...`
+          );
+
+          if (attempt < maxRetries - 1) {
+            await new Promise((resolve) => setTimeout(resolve, waitTime));
+            continue;
+          }
+        }
+
+        // For non-rate-limit errors or final retry, throw immediately
+        if (attempt === maxRetries - 1 || error.status !== 429) {
+          break;
+        }
+      }
     }
+
+    // If we get here, all retries failed
+    const errorMessage = lastError.message || 'Unknown error';
+    const errorDetails = lastError.response?.data
+      ? JSON.stringify(lastError.response.data)
+      : '';
+    throw new Error(
+      `OpenAI API error after ${maxRetries} attempts: ${errorMessage}. ${errorDetails}`
+    );
   }
 
   async executeAction(action) {

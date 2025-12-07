@@ -80,11 +80,17 @@ class PlaywrightAIServer {
           });
         }
 
+        console.log('Processing prompt:', prompt);
         const result = await this.aiIntegration.processPrompt(prompt);
+        console.log('Result:', result.success ? 'Success' : 'Failed');
         res.json(result);
       } catch (error) {
-        res.status(500).json({
+        console.error('Server error processing prompt:', error);
+        const statusCode = error.status === 429 ? 429 : 500;
+        res.status(statusCode).json({
           error: error.message,
+          details: error.response?.data || error.stack,
+          statusCode: statusCode,
         });
       }
     });
